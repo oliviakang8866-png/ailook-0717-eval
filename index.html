@@ -1,0 +1,761 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ailook 0717 模型版本盲测评分</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    background: #000;
+    color: #eee;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    margin: 0;
+    padding: 24px;
+  }
+  h1 { font-size: 20px; font-weight: 600; margin: 0 0 8px 0; color: #fff; }
+  .subtitle { color: #888; font-size: 13px; margin-bottom: 20px; }
+
+  #name-gate {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 2000;
+    display: flex; align-items: center; justify-content: center;
+  }
+  #name-gate .box {
+    background: #111; border: 1px solid #333; border-radius: 12px; padding: 28px;
+    width: min(360px, 90vw); text-align: center;
+  }
+  #name-gate h2 { margin: 0 0 6px 0; font-size: 17px; color: #fff; }
+  #name-gate p { color: #999; font-size: 13px; margin: 0 0 16px 0; }
+  #name-gate input {
+    width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid #333;
+    background: #0a0a0a; color: #eee; font-size: 14px; margin-bottom: 12px;
+  }
+  #name-gate button {
+    width: 100%; padding: 10px; border-radius: 8px; border: none;
+    background: #4a9eff; color: #fff; font-size: 14px; cursor: pointer; font-weight: 600;
+  }
+  #name-gate button:disabled { background: #333; cursor: not-allowed; }
+
+  #summary {
+    position: sticky; top: 0; z-index: 50; background: #111; border: 1px solid #262626;
+    border-radius: 10px; padding: 14px 18px; margin-bottom: 20px;
+    display: flex; flex-wrap: wrap; gap: 20px; align-items: center;
+  }
+  .stat { display: flex; flex-direction: column; align-items: center; min-width: 60px; }
+  .stat .v { font-size: 20px; font-weight: 700; color: #fff; }
+  .stat .l { font-size: 11px; color: #999; margin-top: 2px; }
+  .progress-bar { flex: 1; min-width: 140px; height: 8px; background: #262626; border-radius: 4px; overflow: hidden; }
+  .progress-fill { height: 100%; background: #4a9eff; transition: width .2s; }
+  #evaluator-badge { font-size: 12px; color: #9ecbff; }
+  #save-status { font-size: 11px; color: #666; min-width: 70px; }
+
+  #filter-bar {
+    display: flex; flex-wrap: wrap; gap: 14px; align-items: center;
+    background: #0e0e0e; border: 1px solid #262626; border-radius: 10px;
+    padding: 10px 16px; margin-bottom: 16px; font-size: 12px; color: #bbb;
+  }
+  #filter-bar label { display: flex; align-items: center; gap: 5px; cursor: pointer; white-space: nowrap; }
+  #filter-bar select {
+    background: #1c1c1c; color: #ddd; border: 1px solid #333; border-radius: 5px;
+    padding: 3px 6px; font-size: 12px;
+  }
+  #filter-bar button {
+    background: #1c1c1c; border: 1px solid #333; color: #ccc; border-radius: 5px;
+    padding: 5px 12px; font-size: 12px; cursor: pointer;
+  }
+  #filter-bar button:hover { background: #2a2a2a; }
+  #filter-count { margin-left: auto; color: #888; }
+  .row.filtered-out { display: none; }
+
+  .row {
+    background: #111; border: 1px solid #262626; border-radius: 10px;
+    padding: 16px; margin-bottom: 20px;
+  }
+  .row.voted { border-color: #2a5a2a; }
+
+  .row-header { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; flex-wrap: wrap; }
+  .header-title { font-size: 13px; color: #999; word-break: break-all; }
+  .header-thumbs { display: flex; gap: 10px; }
+  .header-thumb { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .header-thumb img {
+    width: 52px; height: 52px; object-fit: cover; border-radius: 6px;
+    border: 1px solid #2a2a2a; background: #0a0a0a; cursor: zoom-in; display: block;
+  }
+  .header-thumb .thumb-label { font-size: 9px; color: #777; }
+
+  .row-body { display: flex; gap: 16px; align-items: flex-start; }
+  .main-cells { flex: 1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; min-width: 0; }
+  .cell { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .label { font-size: 12px; color: #bbb; text-align: center; min-height: 16px; }
+  .img-wrap {
+    background: #0a0a0a; border: 1px solid #2a2a2a; border-radius: 8px; overflow: hidden;
+    min-height: 100px; display: flex; align-items: center; justify-content: center;
+  }
+  .img-wrap img { width: 100%; height: auto; max-height: 380px; object-fit: contain; display: block; cursor: zoom-in; }
+  .img-link {
+    font-size: 10px; color: #6a9edb; text-align: center; overflow: hidden;
+    text-overflow: ellipsis; white-space: nowrap; display: block; text-decoration: none;
+  }
+  .img-link:hover { text-decoration: underline; }
+
+  .quality-review { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+  .quality-buttons { display: flex; gap: 6px; }
+  .quality-buttons button {
+    flex: 1; background: #1c1c1c; border: 1px solid #333; color: #ccc;
+    padding: 6px 4px; border-radius: 5px; font-size: 11px; cursor: pointer;
+    transition: background .15s, border-color .15s;
+  }
+  .quality-buttons button:hover { background: #2a2a2a; }
+  .quality-buttons button.q-chosen.q-fail { background: #331414; border-color: #d95c5c; color: #ffb0b0; }
+  .quality-buttons button.q-chosen.q-pass { background: #33290f; border-color: #d9a441; color: #ffd98a; }
+  .quality-buttons button.q-chosen.q-high { background: #123a12; border-color: #6ad16a; color: #b6ffb6; }
+  .quality-reasons {
+    display: flex; flex-direction: column; gap: 4px; max-height: 170px; overflow-y: auto;
+    background: #0a0a0a; border: 1px solid #333; border-radius: 5px; padding: 6px 8px;
+  }
+  .quality-reasons label {
+    display: flex; align-items: flex-start; gap: 6px; font-size: 11px; color: #ccc;
+    cursor: pointer; line-height: 1.3;
+  }
+  .quality-reasons input[type="checkbox"] { margin-top: 2px; flex-shrink: 0; }
+  .quality-count { font-size: 10px; color: #666; }
+
+  .vote-sidebar { display: flex; flex-direction: column; gap: 8px; width: 170px; flex-shrink: 0; }
+  .vote-sidebar .remark-input { flex-basis: 100%; }
+
+  @media (max-width: 900px) {
+    .row-body { flex-direction: column; }
+    .vote-sidebar { flex-direction: row; flex-wrap: wrap; width: 100%; }
+    .vote-sidebar button { flex: 1 1 100px; }
+    .main-cells { grid-template-columns: repeat(3, 1fr); width: 100%; }
+  }
+  @media (max-width: 640px) {
+    .main-cells { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  #finish-bar {
+    position: sticky; bottom: 0; background: #111; border: 1px solid #262626;
+    border-radius: 10px; padding: 16px; margin-top: 8px; text-align: center;
+  }
+  #finish-bar button {
+    padding: 12px 32px; border-radius: 8px; border: none; font-size: 14px; font-weight: 600;
+    background: #4a9eff; color: #fff; cursor: pointer;
+  }
+  #finish-bar button:disabled { background: #333; color: #777; cursor: not-allowed; }
+  #finish-bar .hint { font-size: 12px; color: #888; margin-top: 8px; line-height: 1.6; }
+  #finish-bar .hint a { color: #4a9eff; text-decoration: none; }
+  #finish-bar .hint a:hover { text-decoration: underline; }
+  #finish-screen {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 2000;
+    align-items: center; justify-content: center; text-align: center;
+  }
+  #finish-screen.open { display: flex; }
+  #finish-screen .box { background: #111; border: 1px solid #333; border-radius: 12px; padding: 36px; }
+  #finish-screen h2 { color: #8fd18f; margin: 0 0 10px 0; }
+  #finish-screen p { color: #aaa; font-size: 13px; }
+
+  .vote-sidebar button {
+    flex: 1; background: #1c1c1c; border: 1px solid #333; color: #ddd;
+    padding: 14px 10px; border-radius: 6px; font-size: 13px; cursor: pointer;
+    transition: background .15s, border-color .15s;
+  }
+  .vote-sidebar button:hover { background: #2a2a2a; }
+  .vote-sidebar button.chosen { background: #234; border-color: #4a9eff; color: #9ecbff; }
+  .vote-sidebar button.chosen.both-good { border-color: #6ad16a; color: #b6ffb6; background: #123a12; }
+  .vote-sidebar button.chosen.both-bad { border-color: #d95c5c; color: #ffb0b0; background: #331414; }
+  .remark-input {
+    flex: 1; min-height: 80px; resize: vertical; background: #0a0a0a; color: #ddd;
+    border: 1px solid #333; border-radius: 6px; padding: 8px 10px; font-size: 12px;
+    font-family: inherit; line-height: 1.4;
+  }
+  .remark-input::placeholder { color: #555; }
+  .remark-input:focus { outline: none; border-color: #4a9eff; }
+  .remark-status { font-size: 10px; color: #666; text-align: right; min-height: 12px; }
+
+  #lightbox {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.92);
+    z-index: 1000; align-items: center; justify-content: center; cursor: zoom-out;
+  }
+  #lightbox.open { display: flex; }
+  #lightbox img { max-width: 92vw; max-height: 92vh; object-fit: contain; box-shadow: 0 0 40px rgba(0,0,0,0.6); }
+  #lightbox .close-hint { position: fixed; top: 16px; right: 24px; color: #ccc; font-size: 14px; }
+</style>
+</head>
+<body>
+
+<div id="name-gate">
+  <div class="box">
+    <h2>开始评分前</h2>
+    <p>请输入你的姓名/花名，用于区分每个人提交的打分结果</p>
+    <input id="name-input" type="text" placeholder="例如：olivia">
+    <button id="name-submit" onclick="submitName()">开始评分</button>
+  </div>
+</div>
+
+<h1>ailook 0717 模型版本盲测评分</h1>
+<div class="subtitle">共 100 条 · 盲测对比（左右顺序随机打乱）· 点击图片可放大 · 打分实时写入 Google Sheet</div>
+
+<div id="summary"></div>
+
+<div id="filter-bar">
+  <label><input type="checkbox" id="filter-empty-gsb" onchange="applyFilters()"> 只看 GSB 未选</label>
+  <label><input type="checkbox" id="filter-empty-quality" onchange="applyFilters()"> 只看质量评测未填（A或B任一空）</label>
+  <label><input type="checkbox" id="filter-missing-reason" onchange="applyFilters()"> 只看选了 Fail/Pass 但没填原因</label>
+  <label>A 质量状态：
+    <select id="filter-a-status" onchange="applyFilters()">
+      <option value="">不限</option>
+      <option value="empty">未填</option>
+      <option value="fail">Fail</option>
+      <option value="pass">Pass</option>
+      <option value="high_quality">High Quality</option>
+    </select>
+  </label>
+  <label>B 质量状态：
+    <select id="filter-b-status" onchange="applyFilters()">
+      <option value="">不限</option>
+      <option value="empty">未填</option>
+      <option value="fail">Fail</option>
+      <option value="pass">Pass</option>
+      <option value="high_quality">High Quality</option>
+    </select>
+  </label>
+  <button onclick="resetFilters()">清除筛选</button>
+  <span id="filter-count"></span>
+</div>
+
+<div id="rows"></div>
+
+<div id="finish-bar">
+  <button id="finish-btn" onclick="finishEvaluation()" disabled>提交本次评测（100 行全部打完后可用）</button>
+  <div class="hint" id="finish-hint"></div>
+</div>
+
+<div id="lightbox">
+  <span class="close-hint">点击任意处关闭 ✕</span>
+  <img id="lightbox-img" src="" alt="">
+</div>
+
+<div id="finish-screen">
+  <div class="box">
+    <h2>✓ 已提交，谢谢你的评测！</h2>
+    <p id="finish-screen-text"></p>
+  </div>
+</div>
+
+<script>
+const DATA = [{"index": 0, "item_id": "27210793460", "category": "Winter Jackets & Coats", "user_img": "https://mms.img.susercontent.com/my-11134253-820lf-mp7ypgo28lcf5a", "template_img": "https://mms.img.susercontent.com/my-11134253-820l6-mq4uk0i4mgaz09", "product_img": "https://mms.img.susercontent.com/th-11134201-7r98s-lzzskgm9czup03", "options": [{"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820lg-mqojprqdwmpv5b"}, {"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820l8-mqr4cucl0bnxa9"}]}, {"index": 1, "item_id": "54652532876", "category": "Pants", "user_img": "https://mms.img.susercontent.com/my-11134253-820lf-mp7ypgo28lcf5a", "template_img": "https://mms.img.susercontent.com/my-11134253-820l8-mq4ugscfbf2k2f", "product_img": "https://mms.img.susercontent.com/th-11134207-81ztk-mjjz7jvvknpgbc", "options": [{"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820l7-mqr4cukcozyb00"}, {"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820l5-mqojprrmz28d0a"}]}, {"index": 2, "item_id": "16328618879", "category": "Shirts & Blouses", "user_img": "https://mms.img.susercontent.com/my-11134253-820lf-mp7ypgo28lcf5a", "template_img": "https://mms.img.susercontent.com/my-11134253-820l6-mq4umkjgmhvw13", "product_img": "https://mms.img.susercontent.com/7adc61ae1e72b6b4a9b5f1cf56dd279a", "options": [{"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820l6-mqojps7tlgjz05"}, {"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820lg-mqr4cu7jyq6l50"}]}, {"index": 3, "item_id": "19280194960", "category": "Blazers", "user_img": "https://mms.img.susercontent.com/my-11134253-820lf-mp7ypgo28lcf5a", "template_img": "https://mms.img.susercontent.com/my-11134253-820lf-mq4uoc80bevhc8", "product_img": "https://mms.img.susercontent.com/th-11134201-81zto-mfxjjqz2ckcr4b", "options": [{"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820l4-mqr4ctiruhog67"}, {"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820l8-mqojpsa2iqdefc"}]}, {"index": 4, "item_id": "43517623507", "category": "Pants", "user_img": "https://mms.img.susercontent.com/my-11134253-820lf-mp7ypgo28lcf5a", "template_img": "https://mms.img.susercontent.com/my-11134253-820l6-mq4urpequ0i44e", "product_img": "https://mms.img.susercontent.com/th-11134207-81ztf-molcvynpufpr58", "options": [{"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820l9-mqr4cudy7ndb82"}, {"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820l4-mqojprp1iuipba"}]}, {"index": 5, "item_id": "24708078162", "category": "Blazers", "user_img": "https://mms.img.susercontent.com/my-11134253-820lf-mp7ypgo28lcf5a", "template_img": "https://mms.img.susercontent.com/my-11134253-820lb-mq4umd5t7da921", "product_img": "https://mms.img.susercontent.com/th-11134207-7r98x-lqemxkv2r8is38", "options": [{"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820lh-mqr4cty7z5zf51"}, {"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820lf-mqojps8ue23199"}]}, {"index": 6, "item_id": "29901365594", "category": "Pants", "user_img": "https://mms.img.susercontent.com/my-11134253-820lf-mp7ypgo28lcf5a", "template_img": "https://mms.img.susercontent.com/my-11134253-820l9-mq4wd49tq0w127", "product_img": "https://mms.img.susercontent.com/th-11134207-81zte-mhwuhj174xz9b2", "options": [{"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820l5-mqojprz3rshvd6"}, {"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820lc-mqr4cti1z75ud7"}]}, {"index": 7, "item_id": "22452560180", "category": "Winter Jackets & Coats", "user_img": "https://mms.img.susercontent.com/my-11134253-820lf-mp7ypgo28lcf5a", "template_img": "https://mms.img.susercontent.com/my-11134253-820lg-mq4sr56elh5a54", "product_img": "https://mms.img.susercontent.com/th-11134207-7r98o-lkv2y3j43pbg69", "options": [{"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820li-mqr4cud8giz268"}, {"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820la-mqojprp4zwnh4d"}]}, {"index": 8, "item_id": "25342875957", "category": "Tanks & Camisoles", "user_img": "https://mms.img.susercontent.com/my-11134253-820lf-mp7ypgo28lcf5a", "template_img": "https://mms.img.susercontent.com/my-11134253-820l9-mq4ugu5c7jsy28", "product_img": "https://mms.img.susercontent.com/sg-11134201-7rd5g-m7j8f2ijougla4", "options": [{"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820le-mqr4cumo1czv5b"}, {"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820l6-mqojpsenopvmd8"}]}, {"index": 9, "item_id": "24586920600", "category": "Winter Jackets & Coats", "user_img": "https://mms.img.susercontent.com/my-11134253-820lf-mp7ypgo28lcf5a", "template_img": "https://mms.img.susercontent.com/my-11134253-820l7-mq4umwa9lq18ae", "product_img": "https://mms.img.susercontent.com/th-11134207-7rasd-m15n4imqyblg37", "options": [{"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820lc-mqr4cu74zair9e"}, {"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820lg-mqojpvsqkef767"}]}, {"index": 10, "item_id": "21530604865", "category": "Jackets", "user_img": "https://mms.img.susercontent.com/id-11134908-822wi-moqqaqwt1lhece", "template_img": "https://mms.img.susercontent.com/my-11134253-820le-mq4oobqwhlos86", "product_img": "https://mms.img.susercontent.com/th-11134207-7rasi-m3aptxv09ld3d3", "options": [{"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820l4-mqr4cu9lpji962"}, {"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820l5-mqojpsitk16r25"}]}, {"index": 11, "item_id": "27188456277", "category": "Jackets", "user_img": "https://mms.img.susercontent.com/id-11134908-822wi-moqqaqwt1lhece", "template_img": "https://mms.img.susercontent.com/my-11134253-820l4-mq4uktkuyfbh60", "product_img": "https://mms.img.susercontent.com/cn-11134207-7ras8-mbx9jbqyu8jhd5", "options": [{"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820lh-mqojprnpq6f770"}, {"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820l4-mqr4cuizoqoe4f"}]}, {"index": 12, "item_id": "40778835337", "category": "Polo Shirts", "user_img": "https://mms.img.susercontent.com/id-11134908-822wi-moqqaqwt1lhece", "template_img": "https://mms.img.susercontent.com/my-11134253-820la-mq4u2kkvz2tqa4", "product_img": "https://mms.img.susercontent.com/th-11134207-81ztf-ml0qxxu681l3fd", "options": [{"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820lb-mqojps5vlhqnd1"}, {"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820lg-mqr4culjjbi9e3"}]}, {"index": 13, "item_id": "24869670625", "category": "Suit Pants", "user_img": "https://mms.img.susercontent.com/id-11134908-822wi-moqqaqwt1lhece", "template_img": "https://mms.img.susercontent.com/my-11134253-820l4-mq4up1uht89702", "product_img": "https://mms.img.susercontent.com/th-11134207-7rasl-m4yqy8bhd2cqfe", "options": [{"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820lb-mqr4ctm3pkpb3d"}, {"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820l5-mqojpro9qrrf73"}]}, {"index": 14, "item_id": "44411618007", "category": "Polo Shirts", "user_img": "https://mms.img.susercontent.com/id-11134908-822wi-moqqaqwt1lhece", "template_img": "https://mms.img.susercontent.com/my-11134253-820lc-mq4vnvfexm2q19", "product_img": "https://mms.img.susercontent.com/th-11134207-81zto-mlrhafptiqkhf5", "options": [{"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820ld-mqr4cv06r3eoe1"}, {"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820l7-mqojpswabj7ma3"}]}, {"index": 15, "item_id": "29182118834", "category": "Pants", "user_img": "https://mms.img.susercontent.com/id-11134908-822wi-moqqaqwt1lhece", "template_img": "https://mms.img.susercontent.com/my-11134253-820ld-mq4w08eog3ya93", "product_img": "https://mms.img.susercontent.com/sg-11134201-7rfgo-ma12nz3x7m3572", "options": [{"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820la-mqr4ctr82nlu86"}, {"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820l7-mqojps1tfmddd8"}]}, {"index": 16, "item_id": "29114819810", "category": "Pants", "user_img": "https://mms.img.susercontent.com/id-11134908-822wi-moqqaqwt1lhece", "template_img": "https://mms.img.susercontent.com/my-11134253-820l9-mq4ulhf6lhxqba", "product_img": "https://mms.img.susercontent.com/th-11134207-7rash-m1nms00n4z1l1a", "options": [{"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820la-mqojpsf1girz58"}, {"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820la-mqr4cuimxde7cd"}]}, {"index": 17, "item_id": "24229876765", "category": "Shirts", "user_img": "https://mms.img.susercontent.com/id-11134908-822wi-moqqaqwt1lhece", "template_img": "https://mms.img.susercontent.com/my-11134253-820ld-mq4ur53zcnbj7b", "product_img": "https://mms.img.susercontent.com/th-11134207-7r98o-lv5k463nczdp69", "options": [{"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820lf-mqr4cty42p7173"}, {"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820li-mqojprpnoqo37f"}]}, {"index": 18, "item_id": "11823040270", "category": "Pants", "user_img": "https://mms.img.susercontent.com/id-11134908-822wi-moqqaqwt1lhece", "template_img": "https://mms.img.susercontent.com/my-11134253-820l6-mq4wl5cntwcr32", "product_img": "https://mms.img.susercontent.com/ac232483c1a089dca512d8266e9cd859", "options": [{"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820lh-mqr4cu6gfrbh4c"}, {"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820l8-mqojprvvhukv47"}]}, {"index": 19, "item_id": "18484122120", "category": "Polo Shirts", "user_img": "https://mms.img.susercontent.com/id-11134908-822wi-moqqaqwt1lhece", "template_img": "https://mms.img.susercontent.com/my-11134253-820la-mq4uonptprf27e", "product_img": "https://mms.img.susercontent.com/th-11134207-7rasg-m8955uy1zu269c", "options": [{"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820l7-mqr4cufdab6533"}, {"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820lc-mqojpsx9o7b61a"}]}, {"index": 20, "item_id": "22582414001", "category": "Pants", "user_img": "https://mms.img.susercontent.com/sg-11134253-822zk-mo6e32zmw5xh33", "template_img": "https://mms.img.susercontent.com/my-11134253-820lh-mq4ur5ys0rnvb4", "product_img": "https://mms.img.susercontent.com/th-11134207-7r98r-lmifssl1jx1j10", "options": [{"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820lc-mqr4cy1e4tfy80"}, {"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820le-mqojpwat8mbx0c"}]}, {"index": 21, "item_id": "24108588057", "category": "Skorts", "user_img": "https://mms.img.susercontent.com/sg-11134253-822zk-mo6e32zmw5xh33", "template_img": "https://mms.img.susercontent.com/my-11134253-820l6-mq4opwm1pd6oce", "product_img": "https://mms.img.susercontent.com/th-11134207-81ztk-mht1dtv01k3o4a", "options": [{"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820lh-mqojpsglna4i8f"}, {"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820l8-mqr4cxiah0qqe1"}]}, {"index": 22, "item_id": "42052242088", "category": "Pants", "user_img": "https://mms.img.susercontent.com/sg-11134253-822zk-mo6e32zmw5xh33", "template_img": "https://mms.img.susercontent.com/my-11134253-820lc-mq4uowqbzrbh9f", "product_img": "https://mms.img.susercontent.com/th-11134207-7rasf-ma8tjojp17be9a", "options": [{"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820lf-mqr4cwzllmv774"}, {"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820l6-mqojpvpfadxq5a"}]}, {"index": 23, "item_id": "28544386896", "category": "Tanks & Camisoles", "user_img": "https://mms.img.susercontent.com/sg-11134253-822zk-mo6e32zmw5xh33", "template_img": "https://mms.img.susercontent.com/my-11134253-820l8-mq4uo0q9ui3060", "product_img": "https://mms.img.susercontent.com/th-11134207-81ztp-mlvlww18irkf56", "options": [{"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820l6-mqr4cypz18g05e"}, {"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820lf-mqojpw1yyqdq60"}]}, {"index": 24, "item_id": "10503156151", "category": "Shirts & Blouses", "user_img": "https://mms.img.susercontent.com/sg-11134253-822zk-mo6e32zmw5xh33", "template_img": "https://mms.img.susercontent.com/my-11134253-820le-mq4xg7z8h0crff", "product_img": "https://mms.img.susercontent.com/th-11134207-7ras8-ma07cpuiz1f21b", "options": [{"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820l6-mqr4cxsul98ibd"}, {"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820ld-mqojpwf6k6j3dd"}]}, {"index": 25, "item_id": "15835139577", "category": "Pants", "user_img": "https://mms.img.susercontent.com/sg-11134253-822zk-mo6e32zmw5xh33", "template_img": "https://mms.img.susercontent.com/my-11134253-820lc-mq4um3wbxkao17", "product_img": "https://mms.img.susercontent.com/480734b170a78698ac3dc29e00f4ab7b", "options": [{"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820lc-mqr4cxgj3uha5d"}, {"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820l5-mqojpvf1zytfbb"}]}, {"index": 26, "item_id": "21694784718", "category": "Tanks & Camisoles", "user_img": "https://mms.img.susercontent.com/sg-11134253-822zk-mo6e32zmw5xh33", "template_img": "https://mms.img.susercontent.com/my-11134253-820la-mq4upu9zwhl8f1", "product_img": "https://mms.img.susercontent.com/th-11134207-81ztf-mhlhkb6jalu088", "options": [{"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820li-mqojpw5qo5jj2c"}, {"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820l4-mqr4cygch0ctf6"}]}, {"index": 27, "item_id": "26478674080", "category": "Shirts & Blouses", "user_img": "https://mms.img.susercontent.com/sg-11134253-822zk-mo6e32zmw5xh33", "template_img": "https://mms.img.susercontent.com/my-11134253-820lb-mq4v3gfi62hbf2", "product_img": "https://mms.img.susercontent.com/th-11134207-7rasg-m711wjwxrj6o6e", "options": [{"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820lg-mqojpvy8xr7ma8"}, {"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820le-mqr4cyvxwob17d"}]}, {"index": 28, "item_id": "27028905990", "category": "T-shirts", "user_img": "https://mms.img.susercontent.com/sg-11134253-822zk-mo6e32zmw5xh33", "template_img": "https://mms.img.susercontent.com/my-11134253-820l6-mq4uipqnm9e35a", "product_img": "https://mms.img.susercontent.com/th-11134207-7rasb-m7405q1bhnsl2b", "options": [{"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820lf-mqr4cyhku2h79e"}, {"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820ld-mqojpvzfjlsbb1"}]}, {"index": 29, "item_id": "2668210353", "category": "Tanks & Camisoles", "user_img": "https://mms.img.susercontent.com/sg-11134253-822zk-mo6e32zmw5xh33", "template_img": "https://mms.img.susercontent.com/my-11134253-820la-mq4uhekuo74d78", "product_img": "https://mms.img.susercontent.com/th-11134207-81zth-mg8zntwqx6a5d8", "options": [{"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820l5-mqr4cyyam77v85"}, {"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820lh-mqojpwibpr0tdb"}]}, {"index": 30, "item_id": "40060802982", "category": "Pants", "user_img": "https://mms.img.susercontent.com/id-11134908-822wi-mop1vhr10d8t6e", "template_img": "https://mms.img.susercontent.com/my-11134253-820l6-mq4uolq0fhu6c6", "product_img": "https://mms.img.susercontent.com/th-11134207-7ra0j-mcrq30d8yz288d", "options": [{"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820ld-mqojpzrtiarv28"}, {"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820l9-mqr4cyiabcwf63"}]}, {"index": 31, "item_id": "29975585018", "category": "Pants", "user_img": "https://mms.img.susercontent.com/id-11134908-822wi-mop1vhr10d8t6e", "template_img": "https://mms.img.susercontent.com/my-11134253-820l8-mq4v2nierpjje8", "product_img": "https://mms.img.susercontent.com/sg-11134201-7rbn9-m60tn3g8xg7s65", "options": [{"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820ld-mqr4czcsstfm59"}, {"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820l6-mqojpwvo3xfld3"}]}, {"index": 32, "item_id": "44755406656", "category": "Shirts", "user_img": "https://mms.img.susercontent.com/id-11134908-822wi-mop1vhr10d8t6e", "template_img": "https://mms.img.susercontent.com/my-11134253-820lc-mq4um0y4o5xq87", "product_img": "https://mms.img.susercontent.com/th-11134207-81ztj-moal5b2j88hsff", "options": [{"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820la-mqr4cyvtysy76d"}, {"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820lf-mqojpvt0ledf64"}]}, {"index": 33, "item_id": "22636292480", "category": "Joggers", "user_img": "https://mms.img.susercontent.com/id-11134908-822wi-mop1vhr10d8t6e", "template_img": "https://mms.img.susercontent.com/my-11134253-820li-mq4uracnby1be8", "product_img": "https://mms.img.susercontent.com/th-11134207-7r98s-lsv72wcub5x981", "options": [{"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820lh-mqr4cypbjkzl2e"}, {"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820lc-mqojpw5nfkel28"}]}, {"index": 34, "item_id": "29686536755", "category": "Shirts", "user_img": "https://mms.img.susercontent.com/id-11134908-822wi-mop1vhr10d8t6e", "template_img": "https://mms.img.susercontent.com/my-11134253-820lb-mq4ur7j0j5sef5", "product_img": "https://mms.img.susercontent.com/th-11134207-81zte-mk0kuw8yp9tw03", "options": [{"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820lf-mqojpzt2f4005c"}, {"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820lg-mqr4d2ffvpxc43"}]}, {"index": 35, "item_id": "52101176521", "category": "Suit Jackets & Blazers", "user_img": "https://mms.img.susercontent.com/id-11134908-822wi-mop1vhr10d8t6e", "template_img": "https://mms.img.susercontent.com/my-11134253-820lg-mq4ukicskh720f", "product_img": "https://mms.img.susercontent.com/th-11134207-81zto-mgxkzqdg36kq7f", "options": [{"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820la-mqr4cz4w78qz72"}, {"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820ld-mqojpwr1ruh986"}]}, {"index": 36, "item_id": "9430089938", "category": "Suit Pants", "user_img": "https://mms.img.susercontent.com/id-11134908-822wi-mop1vhr10d8t6e", "template_img": "https://mms.img.susercontent.com/my-11134253-820l4-mq4umu3waosu10", "product_img": "https://mms.img.susercontent.com/th-11134207-7r98w-ltcoiqjgq6wed0", "options": [{"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820la-mqr4cy57pnv126"}, {"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820lg-mqojpwp70gside"}]}, {"index": 37, "item_id": "24671151650", "category": "Cargo", "user_img": "https://mms.img.susercontent.com/id-11134908-822wi-mop1vhr10d8t6e", "template_img": "https://mms.img.susercontent.com/my-11134253-820l7-mq4whxz740st84", "product_img": "https://mms.img.susercontent.com/th-11134207-7r98s-ltdhz5o1uta516", "options": [{"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820l8-mqr4d1lckoao11"}, {"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820lc-mqojpzbwpvk2de"}]}, {"index": 38, "item_id": "28961371572", "category": "Pants", "user_img": "https://mms.img.susercontent.com/id-11134908-822wi-mop1vhr10d8t6e", "template_img": "https://mms.img.susercontent.com/my-11134253-820l4-mq4q3w9qh3411a", "product_img": "https://mms.img.susercontent.com/th-11134207-7r991-m06sdkdyrsu2fe", "options": [{"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820l6-mqr4cyorg6ip88"}, {"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820lf-mqojpwhf67sy16"}]}, {"index": 39, "item_id": "27919497013", "category": "Jackets", "user_img": "https://mms.img.susercontent.com/id-11134908-822wi-mop1vhr10d8t6e", "template_img": "https://mms.img.susercontent.com/my-11134253-820le-mq4uk947pzpdf5", "product_img": "https://mms.img.susercontent.com/th-11134207-7rash-m7tiiowfgys8a2", "options": [{"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820lc-mqojpwx8ri0y36"}, {"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820lf-mqr4cz7reku8a6"}]}, {"index": 40, "item_id": "25120215177", "category": "Pants", "user_img": "https://mms.img.susercontent.com/id-11134908-822wk-motj3m9fm2a4ab", "template_img": "https://mms.img.susercontent.com/my-11134253-820l4-mq4uhwc2yvwr70", "product_img": "https://mms.img.susercontent.com/th-11134207-7rasl-m43hhizbshvua0", "options": [{"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820la-mqojpyucqhog3d"}, {"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820l7-mqr4czawzk0d97"}]}, {"index": 41, "item_id": "52700841844", "category": "Cargo", "user_img": "https://mms.img.susercontent.com/id-11134908-822wk-motj3m9fm2a4ab", "template_img": "https://mms.img.susercontent.com/my-11134253-820la-mq4umlgg41e392", "product_img": "https://mms.img.susercontent.com/th-11134207-81ztm-mgolxgzw7b4e2f", "options": [{"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820l4-mqojpwomzvgi7f"}, {"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820l9-mqr4cz60s3cy02"}]}, {"index": 42, "item_id": "40778835337", "category": "Polo Shirts", "user_img": "https://mms.img.susercontent.com/id-11134908-822wk-motj3m9fm2a4ab", "template_img": "https://mms.img.susercontent.com/my-11134253-820la-mq4u2kkvz2tqa4", "product_img": "https://mms.img.susercontent.com/th-11134207-81ztf-ml0qxxu681l3fd", "options": [{"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820lb-mqojq1cdzx8v6a"}, {"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820li-mqr4d2xwadq9c2"}]}, {"index": 43, "item_id": "29114819810", "category": "Pants", "user_img": "https://mms.img.susercontent.com/id-11134908-822wk-motj3m9fm2a4ab", "template_img": "https://mms.img.susercontent.com/my-11134253-820ld-mq4ulh7p4w018a", "product_img": "https://mms.img.susercontent.com/th-11134207-7rash-m1nms00n4z1l1a", "options": [{"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820l9-mqojpzt4kd8vd3"}, {"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820lh-mqr4d0gzak972b"}]}, {"index": 44, "item_id": "27919497013", "category": "Jackets", "user_img": "https://mms.img.susercontent.com/id-11134908-822wk-motj3m9fm2a4ab", "template_img": "https://mms.img.susercontent.com/my-11134253-820le-mq4uk947pzpdf5", "product_img": "https://mms.img.susercontent.com/th-11134207-7rash-m7tiiowfgys8a2", "options": [{"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820l9-mqojpzx37rwh33"}, {"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820ld-mqr4d1ljmx3f75"}]}, {"index": 45, "item_id": "51154392322", "category": "Pants", "user_img": "https://mms.img.susercontent.com/id-11134908-822wk-motj3m9fm2a4ab", "template_img": "https://mms.img.susercontent.com/my-11134253-820ld-mq4ulzmtv85p7b", "product_img": "https://mms.img.susercontent.com/th-11134207-81zto-mjd1bp3xuyo094", "options": [{"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820lg-mqojpx14q13693"}, {"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820lh-mqr4d22vdtzf6e"}]}, {"index": 46, "item_id": "48604536417", "category": "Pants", "user_img": "https://mms.img.susercontent.com/id-11134908-822wk-motj3m9fm2a4ab", "template_img": "https://mms.img.susercontent.com/my-11134253-820l5-mq4ur9egrnk256", "product_img": "https://mms.img.susercontent.com/th-11134207-81zti-mjdn8sx9bwu982", "options": [{"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820l9-mqr4d0tnngu8e4"}, {"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820lg-mqojpwtpkc992f"}]}, {"index": 47, "item_id": "13274041147", "category": "Shirts", "user_img": "https://mms.img.susercontent.com/id-11134908-822wk-motj3m9fm2a4ab", "template_img": "https://mms.img.susercontent.com/my-11134253-820lf-mq4umqqk6k999e", "product_img": "https://mms.img.susercontent.com/sg-11134201-7qveb-ljpo6xoq57zrb2", "options": [{"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820l6-mqr4d1zgedjf46"}, {"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820lb-mqojpzav7y811c"}]}, {"index": 48, "item_id": "22270759821", "category": "Cargo", "user_img": "https://mms.img.susercontent.com/id-11134908-822wk-motj3m9fm2a4ab", "template_img": "https://mms.img.susercontent.com/my-11134253-820l8-mq4wfcdp0ob195", "product_img": "https://mms.img.susercontent.com/th-11134207-7qul4-ljobzwzjw5e1ac", "options": [{"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820lf-mqr4d1ljtwcu25"}, {"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820l9-mqojpzumu7m679"}]}, {"index": 49, "item_id": "28961371572", "category": "Pants", "user_img": "https://mms.img.susercontent.com/id-11134908-822wk-motj3m9fm2a4ab", "template_img": "https://mms.img.susercontent.com/my-11134253-820l4-mq4q3w9qh3411a", "product_img": "https://mms.img.susercontent.com/th-11134207-7r991-m06sdkdyrsu2fe", "options": [{"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820l6-mqr4d1ssl9mpc0"}, {"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820lh-mqojq0uvnmdpfa"}]}, {"index": 50, "item_id": "21091514684", "category": "Pants", "user_img": "https://mms.img.susercontent.com/sg-11134253-823oy-momdl8ig6l1p1b", "template_img": "https://mms.img.susercontent.com/my-11134253-820li-mq4ui8exsiyzf4", "product_img": "https://mms.img.susercontent.com/th-11134207-7qul6-lk0iocza3kme66", "options": [{"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820lf-mqojpzlxhcsjf9"}, {"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820lg-mqr4d2nwm58h53"}]}, {"index": 51, "item_id": "54954819651", "category": "Pants", "user_img": "https://mms.img.susercontent.com/sg-11134253-823oy-momdl8ig6l1p1b", "template_img": "https://mms.img.susercontent.com/my-11134253-820lg-mq4uqg3mavi89b", "product_img": "https://mms.img.susercontent.com/th-11134207-81zto-mjl0g9b1ccn8c5", "options": [{"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820lg-mqojq0bttssre8"}, {"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820l6-mqr4d2z0o5xd6c"}]}, {"index": 52, "item_id": "6256097923", "category": "Pants", "user_img": "https://mms.img.susercontent.com/sg-11134253-823oy-momdl8ig6l1p1b", "template_img": "https://mms.img.susercontent.com/my-11134253-820la-mq4uird986ipdc", "product_img": "https://mms.img.susercontent.com/f622e568bf042f002d576382330995a7", "options": [{"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820la-mqojq074pzimca"}, {"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820lf-mqr4d2ukb1flda"}]}, {"index": 53, "item_id": "45554412379", "category": "Pants", "user_img": "https://mms.img.susercontent.com/sg-11134253-823oy-momdl8ig6l1p1b", "template_img": "https://mms.img.susercontent.com/my-11134253-820lb-mq4ulkuj632824", "product_img": "https://mms.img.susercontent.com/th-11134207-81zti-mjd1trwwrchuc6", "options": [{"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820lb-mqojpzqe5szy37"}, {"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820le-mqr4d2fyexov89"}]}, {"index": 54, "item_id": "49051233897", "category": "Suit Jackets & Blazers", "user_img": "https://mms.img.susercontent.com/sg-11134253-823oy-momdl8ig6l1p1b", "template_img": "https://mms.img.susercontent.com/my-11134253-820lf-mq4ugxm17bpo87", "product_img": "https://mms.img.susercontent.com/th-11134207-81ztf-mgyvgqi462vgbd", "options": [{"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820li-mqojq0mjbx8i36"}, {"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820le-mqr4d309i60zc3"}]}, {"index": 55, "item_id": "9430089938", "category": "Suit Pants", "user_img": "https://mms.img.susercontent.com/sg-11134253-823oy-momdl8ig6l1p1b", "template_img": "https://mms.img.susercontent.com/my-11134253-820l4-mq4umu3waosu10", "product_img": "https://mms.img.susercontent.com/th-11134207-7r98w-ltcoiqjgq6wed0", "options": [{"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820la-mqr4d2b3kmxa6b"}, {"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820l7-mqojq070jqbxef"}]}, {"index": 56, "item_id": "29422761266", "category": "Suit Pants", "user_img": "https://mms.img.susercontent.com/sg-11134253-823oy-momdl8ig6l1p1b", "template_img": "https://mms.img.susercontent.com/my-11134253-820lg-mq4uo68hyuj0c9", "product_img": "https://mms.img.susercontent.com/th-11134207-7rasd-m4ofpq6xams4d8", "options": [{"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820l9-mqr4d5lwnojx88"}, {"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820le-mqojq35qxde371"}]}, {"index": 57, "item_id": "28793500128", "category": "Pants", "user_img": "https://mms.img.susercontent.com/sg-11134253-823oy-momdl8ig6l1p1b", "template_img": "https://mms.img.susercontent.com/my-11134253-820lh-mq4vk609fehab6", "product_img": "https://mms.img.susercontent.com/th-11134207-81zti-mop5oj7y9sstfd", "options": [{"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820le-mqojq0r96fb65f"}, {"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820le-mqr4d2w8bev548"}]}, {"index": 58, "item_id": "7722467378", "category": "Pants", "user_img": "https://mms.img.susercontent.com/sg-11134253-823oy-momdl8ig6l1p1b", "template_img": "https://mms.img.susercontent.com/my-11134253-820lc-mq4uqqxmkxe349", "product_img": "https://mms.img.susercontent.com/3c5d77509ea035fb74a9ed01121f7a23", "options": [{"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820lg-mqr4d45vm70j5a"}, {"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820lh-mqojq3lznpjid6"}]}, {"index": 59, "item_id": "24111530452", "category": "Shirts", "user_img": "https://mms.img.susercontent.com/sg-11134253-823oy-momdl8ig6l1p1b", "template_img": "https://mms.img.susercontent.com/my-11134253-820lb-mq4vknz5mgw1b7", "product_img": "https://mms.img.susercontent.com/th-11134207-7r98w-lvlbrhyy9vxe69", "options": [{"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820l8-mqojq0z5tekr22"}, {"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820lc-mqr4d4ss8emmf0"}]}, {"index": 60, "item_id": "23378510932", "category": "Blazers", "user_img": "https://mms.img.susercontent.com/my-11134253-820lc-mop503fz8p35e3", "template_img": "https://mms.img.susercontent.com/my-11134253-820lb-mq4ulda24ljf77", "product_img": "https://mms.img.susercontent.com/th-11134207-7r98t-logcd4tluilg33", "options": [{"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820l4-mqr4d5fvvdaj5d"}, {"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820l4-mqojq0qylpts49"}]}, {"index": 61, "item_id": "3578018720", "category": "Shirts & Blouses", "user_img": "https://mms.img.susercontent.com/my-11134253-820lc-mop503fz8p35e3", "template_img": "https://mms.img.susercontent.com/my-11134253-820l6-mq4wgllai6mn3e", "product_img": "https://mms.img.susercontent.com/th-11134207-81zth-mezisxop2mmm7a", "options": [{"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820l6-mqojq2m3k9hn33"}, {"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820l7-mqr4d2sv4he5ef"}]}, {"index": 62, "item_id": "24636937681", "category": "Tanks & Camisoles", "user_img": "https://mms.img.susercontent.com/my-11134253-820lc-mop503fz8p35e3", "template_img": "https://mms.img.susercontent.com/my-11134253-820lg-mq4wpire3l6o4c", "product_img": "https://mms.img.susercontent.com/th-11134207-7rasf-m175r9pt7n2957", "options": [{"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820la-mqojq2dadpfx21"}, {"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820lc-mqr4d2uaa1hd10"}]}, {"index": 63, "item_id": "51303226242", "category": "Blazers", "user_img": "https://mms.img.susercontent.com/my-11134253-820lc-mop503fz8p35e3", "template_img": "https://mms.img.susercontent.com/my-11134253-820l5-mq4wgjdcfd3hbb", "product_img": "https://mms.img.susercontent.com/sg-11134201-81zv0-micwzd6zx62u1b", "options": [{"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820ld-mqr4d5jf6sch20"}, {"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820li-mqojq1jtb9xp93"}]}, {"index": 64, "item_id": "27085769515", "category": "Shirts & Blouses", "user_img": "https://mms.img.susercontent.com/my-11134253-820lc-mop503fz8p35e3", "template_img": "https://mms.img.susercontent.com/my-11134253-820le-mq4vz4wednv1f9", "product_img": "https://mms.img.susercontent.com/th-11134207-7rasf-m99qdctx2epa79", "options": [{"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820ld-mqr4d396e4g327"}, {"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820l8-mqojq3785dkwd6"}]}, {"index": 65, "item_id": "29471623264", "category": "Shirts & Blouses", "user_img": "https://mms.img.susercontent.com/my-11134253-820lc-mop503fz8p35e3", "template_img": "https://mms.img.susercontent.com/my-11134253-820l6-mq4ujd4jqmmmb7", "product_img": "https://mms.img.susercontent.com/th-11134207-7rasl-m45wzkujxhvud3", "options": [{"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820la-mqojq2fahixb26"}, {"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820lg-mqr4d66q8q33de"}]}, {"index": 66, "item_id": "27574941406", "category": "Blazers", "user_img": "https://mms.img.susercontent.com/my-11134253-820lc-mop503fz8p35e3", "template_img": "https://mms.img.susercontent.com/my-11134253-820l7-mq4ur99voh7168", "product_img": "https://mms.img.susercontent.com/th-11134207-7ras9-m5qw44vc8wzbb7", "options": [{"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820l4-mqojq36njpq9df"}, {"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820lc-mqr4d6g0o1zj6d"}]}, {"index": 67, "item_id": "29630717196", "category": "Pants", "user_img": "https://mms.img.susercontent.com/my-11134253-820lc-mop503fz8p35e3", "template_img": "https://mms.img.susercontent.com/my-11134253-820lb-mq4qoz7qz30he8", "product_img": "https://mms.img.susercontent.com/th-11134207-7rasi-m7qs0dtkqsaed6", "options": [{"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820la-mqojq6gqhmv701"}, {"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820lb-mqr4d3rxg64h5c"}]}, {"index": 68, "item_id": "58105683533", "category": "Tanks & Camisoles", "user_img": "https://mms.img.susercontent.com/my-11134253-820lc-mop503fz8p35e3", "template_img": "https://mms.img.susercontent.com/my-11134253-820l9-mq4uhzsdbwul20", "product_img": "https://mms.img.susercontent.com/th-11134207-81ztg-mk6fpd7k41dx6d", "options": [{"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820lf-mqojq3lu70g134"}, {"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820lg-mqr4d5d4khzj4a"}]}, {"index": 69, "item_id": "51402310447", "category": "Winter Jackets & Coats", "user_img": "https://mms.img.susercontent.com/my-11134253-820lc-mop503fz8p35e3", "template_img": "https://mms.img.susercontent.com/my-11134253-820l9-mq4ulbhc2a6971", "product_img": "https://mms.img.susercontent.com/th-11134207-81ztn-mhmsvbgpvqblea", "options": [{"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820lg-mqojq3he9am91f"}, {"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820l8-mqr4d5zkka2rc0"}]}, {"index": 70, "item_id": "54059151595", "category": "Shirts", "user_img": "https://mms.img.susercontent.com/sg-11134253-823p6-mp0qa5lmkxe750", "template_img": "https://mms.img.susercontent.com/my-11134253-820l4-mq4uhk9o9de6eb", "product_img": "https://mms.img.susercontent.com/th-11134207-81ztn-mn9s724r6ha8cc", "options": [{"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820l8-mqr4d7d2xddude"}, {"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820l7-mqojq3crdla9f6"}]}, {"index": 71, "item_id": "21091514684", "category": "Pants", "user_img": "https://mms.img.susercontent.com/sg-11134253-823p6-mp0qa5lmkxe750", "template_img": "https://mms.img.susercontent.com/my-11134253-820l4-mq4otum1wkcva1", "product_img": "https://mms.img.susercontent.com/th-11134207-7qukx-lk0iocz9xykp2c", "options": [{"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820la-mqr4d6ghhiby32"}, {"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820lc-mqojq4ame3nldf"}]}, {"index": 72, "item_id": "55408421204", "category": "Shirts", "user_img": "https://mms.img.susercontent.com/sg-11134253-823p6-mp0qa5lmkxe750", "template_img": "https://mms.img.susercontent.com/my-11134253-820l8-mq4uivcc1wqp8c", "product_img": "https://mms.img.susercontent.com/th-11134207-81ztj-mmsxje6kb66d16", "options": [{"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820l4-mqojq40e22of07"}, {"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820lg-mqr4d6oa0zyb75"}]}, {"index": 73, "item_id": "18291332425", "category": "Pants", "user_img": "https://mms.img.susercontent.com/sg-11134253-823p6-mp0qa5lmkxe750", "template_img": "https://mms.img.susercontent.com/my-11134253-820lf-mq4vwmz9j0u9fb", "product_img": "https://mms.img.susercontent.com/th-11134201-23030-mzem4nbtf8nvd5", "options": [{"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820l8-mqojq3qva22z03"}, {"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820l7-mqr4d6mphn289e"}]}, {"index": 74, "item_id": "18518540083", "category": "Pants", "user_img": "https://mms.img.susercontent.com/sg-11134253-823p6-mp0qa5lmkxe750", "template_img": "https://mms.img.susercontent.com/my-11134253-820l8-mq4ujkontrm41d", "product_img": "https://mms.img.susercontent.com/th-11134207-81ztj-motd2q4o1r7x17", "options": [{"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820l9-mqr4d9cukjym48"}, {"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820lf-mqojq3rhwrgudb"}]}, {"index": 75, "item_id": "19943105136", "category": "Jackets", "user_img": "https://mms.img.susercontent.com/sg-11134253-823p6-mp0qa5lmkxe750", "template_img": "https://mms.img.susercontent.com/my-11134253-820l6-mq4uodjpd1xo7f", "product_img": "https://mms.img.susercontent.com/th-11134207-81zte-mjkp3o7eokjk52", "options": [{"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820l8-mqr4d5mwzgu8e1"}, {"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820ld-mqojq6sagpoi43"}]}, {"index": 76, "item_id": "56857572333", "category": "Pants", "user_img": "https://mms.img.susercontent.com/sg-11134253-823p6-mp0qa5lmkxe750", "template_img": "https://mms.img.susercontent.com/my-11134253-820l7-mq4vn7wbu3gr7c", "product_img": "https://mms.img.susercontent.com/th-11134207-81ztj-mnef2k6u988wf1", "options": [{"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820l4-mqojq6cqmlfm04"}, {"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820lb-mqr4d6ij5iiz74"}]}, {"index": 77, "item_id": "42005902703", "category": "Jackets", "user_img": "https://mms.img.susercontent.com/sg-11134253-823p6-mp0qa5lmkxe750", "template_img": "https://mms.img.susercontent.com/my-11134253-820lc-mq4wtwh7yeby83", "product_img": "https://mms.img.susercontent.com/th-11134207-7ra0u-mc7yhto2bq702b", "options": [{"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820lg-mqojq3yvxrepe6"}, {"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820le-mqr4d8qcml1p34"}]}, {"index": 78, "item_id": "51106558625", "category": "Suit Pants", "user_img": "https://mms.img.susercontent.com/sg-11134253-823p6-mp0qa5lmkxe750", "template_img": "https://mms.img.susercontent.com/my-11134253-820lb-mq4rvtblqznw79", "product_img": "https://mms.img.susercontent.com/cn-11134207-7r98o-luepx41xe73n19", "options": [{"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820l4-mqojq4zwxc7409"}, {"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820la-mqr4d70frytp56"}]}, {"index": 79, "item_id": "6194862956", "category": "Jackets", "user_img": "https://mms.img.susercontent.com/sg-11134253-823p6-mp0qa5lmkxe750", "template_img": "https://mms.img.susercontent.com/my-11134253-820lf-mq4ulyyysqoc1f", "product_img": "https://mms.img.susercontent.com/58d34153c9b67850dc14008ba086b9c9", "options": [{"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820l7-mqojq4eynqire4"}, {"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820lh-mqr4d6gqvzlt80"}]}, {"index": 80, "item_id": "28325861881", "category": "Pants", "user_img": "https://mms.img.susercontent.com/my-11134253-820lh-mpkd1gb1e5fv02", "template_img": "https://mms.img.susercontent.com/my-11134253-820ld-mq4sxa5h5zi9bd", "product_img": "https://mms.img.susercontent.com/th-11134207-81zto-miuws1lzol4ya8", "options": [{"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820lg-mqojq4zu45qbec"}, {"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820l4-mqr4d6xde4nhf6"}]}, {"index": 81, "item_id": "40429227053", "category": "Winter Jackets & Coats", "user_img": "https://mms.img.susercontent.com/my-11134253-820lh-mpkd1gb1e5fv02", "template_img": "https://mms.img.susercontent.com/my-11134253-820lf-mq4uvlc1q77y42", "product_img": "https://mms.img.susercontent.com/th-11134207-81zte-mlqojtgzlczs96", "options": [{"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820lc-mqr4d6o7ylfx34"}, {"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820ld-mqojq4x4udj4ab"}]}, {"index": 82, "item_id": "26979805782", "category": "Pants", "user_img": "https://mms.img.susercontent.com/my-11134253-820lh-mpkd1gb1e5fv02", "template_img": "https://mms.img.susercontent.com/my-11134253-820l7-mq4unrobbnr6d8", "product_img": "https://mms.img.susercontent.com/th-11134207-7ras8-m7g62m15d4gqd8", "options": [{"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820lb-mqojq6t4s4xv90"}, {"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820lb-mqr4d7f7ha0zff"}]}, {"index": 83, "item_id": "41729769060", "category": "Pants", "user_img": "https://mms.img.susercontent.com/my-11134253-820lh-mpkd1gb1e5fv02", "template_img": "https://mms.img.susercontent.com/my-11134253-820lg-mq4uohrvbfup0c", "product_img": "https://mms.img.susercontent.com/th-11134207-81zto-mmon2pmjry1b70", "options": [{"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820lf-mqojq5972u4tcd"}, {"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820lf-mqr4d9k1avpp24"}]}, {"index": 84, "item_id": "27631446637", "category": "Pants", "user_img": "https://mms.img.susercontent.com/my-11134253-820lh-mpkd1gb1e5fv02", "template_img": "https://mms.img.susercontent.com/my-11134253-820l4-mq4tdvhz9r0ua3", "product_img": "https://mms.img.susercontent.com/th-11134207-7ras9-m809uy48rsaxae", "options": [{"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820ld-mqr4d7yvl4b289"}, {"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820la-mqojq6buwlqne6"}]}, {"index": 85, "item_id": "41929039551", "category": "Jackets", "user_img": "https://mms.img.susercontent.com/my-11134253-820lh-mpkd1gb1e5fv02", "template_img": "https://mms.img.susercontent.com/my-11134253-820l8-mq4vk6ittc7ff5", "product_img": "https://mms.img.susercontent.com/th-11134207-81ztp-mlfzmcopm13j4e", "options": [{"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820l5-mqr4darhea6b5d"}, {"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820li-mqojq6pjzcaze1"}]}, {"index": 86, "item_id": "2243238043", "category": "Pants", "user_img": "https://mms.img.susercontent.com/my-11134253-820lh-mpkd1gb1e5fv02", "template_img": "https://mms.img.susercontent.com/my-11134253-820lg-mq4upo3nqjgi36", "product_img": "https://mms.img.susercontent.com/th-11134207-81ztc-mjzhmpezs2rk60", "options": [{"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820lg-mqojq705gs9b08"}, {"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820lb-mqr4db09aebl0e"}]}, {"index": 87, "item_id": "23453819612", "category": "Pants", "user_img": "https://mms.img.susercontent.com/my-11134253-820lh-mpkd1gb1e5fv02", "template_img": "https://mms.img.susercontent.com/my-11134253-820l9-mq4wu1ds7rpqe7", "product_img": "https://mms.img.susercontent.com/th-11134207-7r98u-llamqka9o5ha33", "options": [{"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820ld-mqr4d7qb3w1v4b"}, {"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820l4-mqojq60f7zt961"}]}, {"index": 88, "item_id": "27628700238", "category": "Pants", "user_img": "https://mms.img.susercontent.com/my-11134253-820lh-mpkd1gb1e5fv02", "template_img": "https://mms.img.susercontent.com/my-11134253-820lb-mq4uhwbfwqa7ae", "product_img": "https://mms.img.susercontent.com/th-11134207-7ra0l-mceod52omm6751", "options": [{"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820l9-mqr4d9b8pfr72d"}, {"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820lf-mqojq8b3bdhc3a"}]}, {"index": 89, "item_id": "27979651117", "category": "Blazers", "user_img": "https://mms.img.susercontent.com/my-11134253-820lh-mpkd1gb1e5fv02", "template_img": "https://mms.img.susercontent.com/my-11134253-820l6-mq4umj97h24v65", "product_img": "https://mms.img.susercontent.com/th-11134207-81ztd-mo4zm12rfqpt70", "options": [{"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820la-mqojq9hpejnxe3"}, {"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820li-mqr4da5ic4jn58"}]}, {"index": 90, "item_id": "1387349731", "category": "Jackets", "user_img": "https://mms.img.susercontent.com/my-11134253-820lg-mpkd1htirspb34", "template_img": "https://mms.img.susercontent.com/my-11134253-820lf-mq4unol4kt1cfd", "product_img": "https://mms.img.susercontent.com/9b69418c0f3b5e704ba19ff84002119c", "options": [{"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820lb-mqr4d9on4qv5ca"}, {"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820le-mqojq8aaljib15"}]}, {"index": 91, "item_id": "4662134753", "category": "Shirts & Blouses", "user_img": "https://mms.img.susercontent.com/my-11134253-820lg-mpkd1htirspb34", "template_img": "https://mms.img.susercontent.com/my-11134253-820le-mq4v2qajn7cy08", "product_img": "https://mms.img.susercontent.com/th-11134207-7qul7-ljpilvtq9oi1f4", "options": [{"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820l9-mqr4d9nqgzyb74"}, {"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820lb-mqojq6z1h05d69"}]}, {"index": 92, "item_id": "27173437419", "category": "Tanks & Camisoles", "user_img": "https://mms.img.susercontent.com/my-11134253-820lg-mpkd1htirspb34", "template_img": "https://mms.img.susercontent.com/my-11134253-820l4-mq4uhudu3t3f8c", "product_img": "https://mms.img.susercontent.com/cn-11134207-7r98o-lvjzow8rw6hx4c", "options": [{"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820lf-mqojq6raeuirb0"}, {"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820le-mqr4da8x8tfm6d"}]}, {"index": 93, "item_id": "41762086165", "category": "Blazers", "user_img": "https://mms.img.susercontent.com/my-11134253-820lg-mpkd1htirspb34", "template_img": "https://mms.img.susercontent.com/my-11134253-820le-mq4ul37pr6rl5f", "product_img": "https://mms.img.susercontent.com/th-11134207-7ra0h-md789yl7yuh1e9", "options": [{"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820l4-mqojq8d00xz731"}, {"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820lh-mqr4d9nqo2df52"}]}, {"index": 94, "item_id": "51503848178", "category": "T-shirts", "user_img": "https://mms.img.susercontent.com/my-11134253-820lg-mpkd1htirspb34", "template_img": "https://mms.img.susercontent.com/my-11134253-820li-mq4uqpedgkch10", "product_img": "https://mms.img.susercontent.com/th-11134207-81zte-misqjie5xrswfc", "options": [{"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820lc-mqojq7ikw8p96a"}, {"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820l7-mqr4d9w5j0u89d"}]}, {"index": 95, "item_id": "27041800760", "category": "Pants", "user_img": "https://mms.img.susercontent.com/my-11134253-820lg-mpkd1htirspb34", "template_img": "https://mms.img.susercontent.com/my-11134253-820l6-mq4qzhad0w7i39", "product_img": "https://mms.img.susercontent.com/th-11134207-81ztf-mfjgpq3hvnyi6f", "options": [{"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820ld-mqr4dabtkuf5cc"}, {"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820l5-mqojq77gj11p29"}]}, {"index": 96, "item_id": "23080288134", "category": "Winter Jackets & Coats", "user_img": "https://mms.img.susercontent.com/my-11134253-820lg-mpkd1htirspb34", "template_img": "https://mms.img.susercontent.com/my-11134253-820lf-mq4v5i59ay2z57", "product_img": "https://mms.img.susercontent.com/th-11134207-7r98x-llxbsmxdhb0n29", "options": [{"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820l8-mqr4d9rcekni0e"}, {"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820lb-mqojq737f4ld52"}]}, {"index": 97, "item_id": "22582414001", "category": "Pants", "user_img": "https://mms.img.susercontent.com/my-11134253-820lg-mpkd1htirspb34", "template_img": "https://mms.img.susercontent.com/my-11134253-820lh-mq4ur5ys0rnvb4", "product_img": "https://mms.img.susercontent.com/th-11134207-7r98r-lmifssl1jx1j10", "options": [{"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820lb-mqojq7r4bmrn72"}, {"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820lb-mqr4daaenrbh2f"}]}, {"index": 98, "item_id": "22362476522", "category": "Winter Jackets & Coats", "user_img": "https://mms.img.susercontent.com/my-11134253-820lg-mpkd1htirspb34", "template_img": "https://mms.img.susercontent.com/my-11134253-820lf-mq4ukc7pz6dr3a", "product_img": "https://mms.img.susercontent.com/th-11134207-7r990-ltoozpd5plrz7f", "options": [{"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820l4-mqojq8c9dloua1"}, {"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820lf-mqr4d9ox73tb45"}]}, {"index": 99, "item_id": "29021623257", "category": "Shirts & Blouses", "user_img": "https://mms.img.susercontent.com/my-11134253-820lg-mpkd1htirspb34", "template_img": "https://mms.img.susercontent.com/my-11134253-820lh-mq4ur3e05r0r27", "product_img": "https://mms.img.susercontent.com/th-11134207-81ztn-mhkchzc35loj64", "options": [{"key": "8step_dau5500", "url": "https://down-my.img.susercontent.com/my-11134253-820l6-mqojq7id3b4f2c"}, {"key": "8step5step_dau9000", "url": "https://down-my.img.susercontent.com/my-11134253-820l4-mqr4da9gr5dted"}]}];
+const EXEC_URL = 'https://script.google.com/macros/s/AKfycbxh9axPvO1z8dG9Bf4TYbL04GZxHeV2tiVkqVxNnQ_girllGQCc4JRmpyTC-3UeRkvP/exec';
+// Flip to true once you've tested the flow — it then forces evaluators to
+// finish every row before the submit button unlocks.
+const REQUIRE_ALL_ROWS = false;
+// Bumped on every rebuild — deliberately invalidates any locally cached name/
+// votes/remarks/quality selections from a previous version of this page, so
+// each new deploy starts from a clean slate instead of showing stale local
+// state. The Google Sheet itself is untouched by this (it's the source of
+// truth); this only affects what a given browser has cached.
+const BUILD_VERSION = '1784276867';
+const NAME_KEY = 'blind-eval-name-' + BUILD_VERSION;
+const VOTES_KEY_PREFIX = 'blind-eval-votes-' + BUILD_VERSION + '-';
+const REMARKS_KEY_PREFIX = 'blind-eval-remarks-' + BUILD_VERSION + '-';
+const QUALITY_KEY_PREFIX = 'blind-eval-quality-' + BUILD_VERSION + '-';
+let evaluator = localStorage.getItem(NAME_KEY) || '';
+let votes = {};
+let remarks = {};
+let quality = {}; // quality[rowIndex] = { A: {status, reasons}, B: {status, reasons} }
+let saving = {};
+
+const FAIL_REASONS = [["1.1", "Face Identity Inconsistency（人脸一致性失败）"], ["1.2", "Character Feature Changed（人物特征明显改变)"], ["2.1", "Highly Unnatural Body Proportion（身材比例明显不合理/不美观）"], ["2.2", "Highly Unnatural Head-Body Connection（头身衔接明显不自然）"], ["2.3", "Highly Unnatural Pose / Action/Facial Expression（姿势动作表情明显不自然）"], ["2.4", "CG-like Skin Texture（皮肤呈现明显 CG 感）"], ["2.5", "Other Highly Unnatural Issues（其他人物不自然情况）"], ["3.1", "Unrecognizable or Abnormal Objects（生成异物/物体生成异常）"], ["3.2", "Human Generation Abnormality（人体生成异常）"], ["3.3", "Physically Impossible Scene（违反物理现实）"], ["3.4", "Common Sense Violation（违反生活常识）"], ["4.1", "Over-smoothed / Plastic Texture（商品失去真实质感）"], ["5.1", "Muslim Appearance Generated（生成穆斯林形象）"], ["5.2", "Inappropriate Exposure（不当裸露）"], ["5.3", "Other Unexpected Content（其他非预期内容）"], ["6.1", "Main item Mismatch（主商品不一致）"], ["6.2", "Attach item Mismatch（挂载品不相似）"]];
+const NOT_HQ_REASONS = [["1.1", "Cluttered Background / Poor Subject Separation（背景杂乱、主体不突出）"], ["1.2", "Low-quality/Normal Background（背景普通或低端）"], ["1.3", "Unappealing Color Tone（色调发黄、发灰、显脏、不通透）"], ["2.1", "Human Occupancy < 50%（人物占比小于50%）"], ["2.2", "Pose / Expression Unnatural（动作表情不自然）"], ["2.3", "Head-Body Connection Slightly Unnatural（头身衔接轻微不自然）"], ["2.4", "Body Proportion Slightly Unnatural（身材比例轻微不自然）"], ["2.5", "Blurred / Low-detail Face（脸部模糊 / 缺少细节）"], ["3.1", "Outfit Not Well Coordinated（穿搭搭配不够协调/和场景不搭配）"]];
+
+function localVotesKey() { return VOTES_KEY_PREFIX + evaluator; }
+function loadLocalVotes() {
+  try { return JSON.parse(localStorage.getItem(localVotesKey()) || '{}'); } catch (e) { return {}; }
+}
+function saveLocalVotes() {
+  localStorage.setItem(localVotesKey(), JSON.stringify(votes));
+}
+
+function localRemarksKey() { return REMARKS_KEY_PREFIX + evaluator; }
+function loadLocalRemarks() {
+  try { return JSON.parse(localStorage.getItem(localRemarksKey()) || '{}'); } catch (e) { return {}; }
+}
+function saveLocalRemarks() {
+  localStorage.setItem(localRemarksKey(), JSON.stringify(remarks));
+}
+
+function localQualityKey() { return QUALITY_KEY_PREFIX + evaluator; }
+function loadLocalQuality() {
+  try { return JSON.parse(localStorage.getItem(localQualityKey()) || '{}'); } catch (e) { return {}; }
+}
+function saveLocalQuality() {
+  localStorage.setItem(localQualityKey(), JSON.stringify(quality));
+}
+function getQuality(rowIndex, side) {
+  const q = (quality[rowIndex] && quality[rowIndex][side]) || {};
+  return { status: q.status || '', reasons: q.reasons || [] };
+}
+
+// A row only counts as done once: the GSB choice is set, AND both A and B
+// have a quality status, AND any status other than high_quality has at
+// least one reason picked.
+function isRowComplete(rowIndex) {
+  if (!votes[rowIndex]) return false;
+  const qa = getQuality(rowIndex, 'A');
+  const qb = getQuality(rowIndex, 'B');
+  if (!qa.status || !qb.status) return false;
+  if (qa.status !== 'high_quality' && qa.reasons.length === 0) return false;
+  if (qb.status !== 'high_quality' && qb.reasons.length === 0) return false;
+  return true;
+}
+
+// Turns stored reason codes (e.g. "2.2") back into their full label text for
+// the Sheet, so the export is self-explanatory without cross-referencing codes.
+function reasonCodesToLabels(status, codes) {
+  const list = status === 'fail' ? FAIL_REASONS : status === 'pass' ? NOT_HQ_REASONS : [];
+  return codes.map(function(code) {
+    const found = list.find(function(pair) { return pair[0] === code; });
+    return found ? (found[0] + ' ' + found[1]) : code;
+  }).join('; ');
+}
+function setQuality(rowIndex, side, patch) {
+  if (!quality[rowIndex]) quality[rowIndex] = {
+    A: { status: '', reasons: [] }, B: { status: '', reasons: [] }
+  };
+  quality[rowIndex][side] = Object.assign({}, getQuality(rowIndex, side), patch);
+}
+
+function esc(s) {
+  return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function submitName() {
+  const v = document.getElementById('name-input').value.trim();
+  if (!v) { alert('请输入姓名'); return; }
+  evaluator = v;
+  localStorage.setItem(NAME_KEY, v);
+  document.getElementById('name-gate').style.display = 'none';
+  loadMyVotes();
+}
+
+function loadMyVotes() {
+  votes = loadLocalVotes();
+  remarks = loadLocalRemarks();
+  quality = loadLocalQuality();
+  renderSummary();
+  buildRows();
+
+  // Best-effort: try to also pull remote votes (e.g. opened on a new device).
+  // If this is blocked by CORS/network, local votes already rendered above.
+  fetch(EXEC_URL + '?action=getMyVotes&evaluator=' + encodeURIComponent(evaluator))
+    .then(function(r) { return r.json(); })
+    .then(function(remote) {
+      if (remote && remote.ok && remote.votes) {
+        votes = Object.assign({}, remote.votes, votes);
+        saveLocalVotes();
+        renderSummary();
+        buildRows();
+      }
+    })
+    .catch(function() { /* ignore, local votes already shown */ });
+}
+
+function completedCount() {
+  let n = 0;
+  for (let i = 0; i < DATA.length; i++) if (isRowComplete(i)) n++;
+  return n;
+}
+
+// 1-based row numbers (matching the "#N" shown in each row's header) that
+// are still missing something.
+function getIncompleteRowNumbers() {
+  const missing = [];
+  for (let i = 0; i < DATA.length; i++) if (!isRowComplete(i)) missing.push(i + 1);
+  return missing;
+}
+
+function scrollToRow(rowNumber) {
+  const el = document.getElementById('row-' + (rowNumber - 1));
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function renderSummary() {
+  const total = DATA.length;
+  const doneCount = completedCount();
+  const votedCount = Object.keys(votes).length;
+  const pct = total ? Math.round(doneCount / total * 100) : 0;
+  const el = document.getElementById('summary');
+  el.innerHTML =
+    '<span id="evaluator-badge">评测人：' + esc(evaluator) + '</span>' +
+    '<div class="stat"><span class="v">' + doneCount + '/' + total + '</span><span class="l">已完成（含质量评测）</span></div>' +
+    (votedCount !== doneCount ? '<div class="stat"><span class="v">' + votedCount + '/' + total + '</span><span class="l">已选GSB</span></div>' : '') +
+    '<div class="progress-bar"><div class="progress-fill" style="width:' + pct + '%"></div></div>' +
+    '<span id="save-status"></span>';
+
+  const finishBtn = document.getElementById('finish-btn');
+  const finishHint = document.getElementById('finish-hint');
+  const missing = getIncompleteRowNumbers();
+
+  if (doneCount >= total || !REQUIRE_ALL_ROWS) {
+    finishBtn.disabled = false;
+    finishBtn.textContent = '提交本次评测' + (!REQUIRE_ALL_ROWS && doneCount < total ? '（测试模式，未打满也可点）' : '');
+  } else {
+    finishBtn.disabled = true;
+    finishBtn.textContent = '提交本次评测（还差 ' + missing.length + ' 行未完成）';
+  }
+
+  if (missing.length === 0) {
+    finishHint.innerHTML = !REQUIRE_ALL_ROWS ? '⚠️ 测试模式：未强制要求打满全部行数' : '';
+  } else {
+    const shown = missing.slice(0, 20);
+    const links = shown.map(function(n) {
+      return '<a href="javascript:void(0)" onclick="scrollToRow(' + n + ')">#' + n + '</a>';
+    }).join('、');
+    const more = missing.length > 20 ? '，等共 ' + missing.length + ' 行' : '';
+    finishHint.innerHTML =
+      '每行需要选 GSB + 两边都填质量评测（Fail/Pass 还要选原因）才算完成。' +
+      '<br>还没完成：' + links + more + '（点击行号可跳转）';
+  }
+
+  applyFilters();
+}
+
+function finishEvaluation() {
+  const doneCount = completedCount();
+  const missing = getIncompleteRowNumbers();
+  if (missing.length > 0) {
+    // Can only get here in test mode (the button is disabled otherwise) —
+    // give one last explicit list before letting them submit anyway.
+    const preview = missing.slice(0, 20).map(function(n) { return '#' + n; }).join('、') +
+      (missing.length > 20 ? '，等共 ' + missing.length + ' 行' : '');
+    const proceed = confirm('还有 ' + missing.length + ' 行未完成：' + preview + '\n\n确定现在提交吗？（测试模式允许未完成也提交）');
+    if (!proceed) return;
+  }
+  fetch(EXEC_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ action: 'complete', evaluator: evaluator }),
+  })
+    .catch(function() { /* local votes are already saved regardless */ })
+    .finally(function() {
+      document.getElementById('finish-screen-text').textContent =
+        '你一共完成了 ' + doneCount + ' / ' + DATA.length + ' 行打分，结果已经写入统计表格。';
+      document.getElementById('finish-screen').classList.add('open');
+    });
+}
+
+function optionButtonsHtml(row) {
+  const v = votes[row.index];
+  const items = [
+    { key: row.options[0].key, label: 'A 好' },
+    { key: row.options[1].key, label: 'B 好' },
+    { key: 'both_good', label: '都好' },
+    { key: 'both_bad', label: '都不好' },
+  ];
+  return items.map(it => {
+    const chosen = v === it.key;
+    let cls = '';
+    if (chosen && it.key === 'both_good') cls = 'chosen both-good';
+    else if (chosen && it.key === 'both_bad') cls = 'chosen both-bad';
+    else if (chosen) cls = 'chosen';
+    return '<button class="' + cls + '" onclick="cast(' + row.index + ', \'' + it.key + '\')">' + it.label + '</button>';
+  }).join('');
+}
+
+function headerThumb(label, url) {
+  return '<div class="header-thumb">' +
+    '<img src="' + esc(url) + '" loading="lazy" alt="' + esc(label) + '" title="' + esc(url) + '">' +
+    '<span class="thumb-label">' + label + '</span>' +
+    '</div>';
+}
+
+function cast(rowIndex, choice) {
+  if (votes[rowIndex] === choice) {
+    delete votes[rowIndex]; // clicking the already-chosen option again deselects it
+  } else {
+    votes[rowIndex] = choice;
+  }
+  saveLocalVotes();
+  renderRow(rowIndex);
+  submitRow(rowIndex);
+}
+
+function onRemarkChange(rowIndex, text) {
+  remarks[rowIndex] = text;
+  saveLocalRemarks();
+  submitRow(rowIndex);
+}
+
+function setQualityStatus(rowIndex, side, status) {
+  const cur = getQuality(rowIndex, side);
+  const keepReasons = status === cur.status ? cur.reasons : [];
+  setQuality(rowIndex, side, { status: status, reasons: status === 'high_quality' ? [] : keepReasons });
+  saveLocalQuality();
+  renderRow(rowIndex);
+  submitRow(rowIndex);
+}
+
+function toggleQualityReason(rowIndex, side, code, checked) {
+  const cur = getQuality(rowIndex, side);
+  let reasons = cur.reasons.slice();
+  if (checked) {
+    if (reasons.indexOf(code) === -1) reasons.push(code);
+  } else {
+    reasons = reasons.filter(function(c) { return c !== code; });
+  }
+  setQuality(rowIndex, side, { reasons: reasons });
+  saveLocalQuality();
+  renderQualityCount(rowIndex, side);
+  submitRow(rowIndex);
+}
+
+function renderQualityCount(rowIndex, side) {
+  const el = document.getElementById('qcount-' + rowIndex + '-' + side);
+  if (!el) return;
+  const n = getQuality(rowIndex, side).reasons.length;
+  el.textContent = n > 0 ? '已选 ' + n + ' 项' : '';
+}
+
+function submitRow(rowIndex) {
+  renderSummary();
+
+  const row = DATA[rowIndex];
+  const statusEl = document.getElementById('save-status');
+  statusEl.textContent = '保存中…';
+
+  const qA = getQuality(rowIndex, 'A');
+  const qB = getQuality(rowIndex, 'B');
+
+  const payload = {
+    evaluator: evaluator,
+    rowIndex: rowIndex,
+    itemId: row.item_id,
+    choice: votes[rowIndex] || '',
+    remark: remarks[rowIndex] || '',
+    aModel: row.options[0].key,
+    bModel: row.options[1].key,
+    aUrl: row.options[0].url,
+    bUrl: row.options[1].url,
+    userImg: row.user_img,
+    aQualityStatus: qA.status || '',
+    aQualityReason: reasonCodesToLabels(qA.status, qA.reasons),
+    bQualityStatus: qB.status || '',
+    bQualityReason: reasonCodesToLabels(qB.status, qB.reasons),
+  };
+
+  fetch(EXEC_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(payload),
+  })
+    .then(function(r) { return r.json(); })
+    .then(function(res) {
+      if (res && res.ok) {
+        statusEl.textContent = '已保存 ✓';
+      } else {
+        statusEl.textContent = '保存失败，请重试';
+      }
+      setTimeout(function() { if (statusEl.textContent === '已保存 ✓') statusEl.textContent = ''; }, 1500);
+    })
+    .catch(function() {
+      statusEl.textContent = '保存失败，请检查网络后重试';
+    });
+}
+
+function cell(label, url) {
+  return '<div class="cell">' +
+    '<div class="label">' + label + '</div>' +
+    '<div class="img-wrap"><img src="' + esc(url) + '" loading="lazy" alt="' + esc(label) + '"></div>' +
+    '<a class="img-link" href="' + esc(url) + '" target="_blank" rel="noopener" title="' + esc(url) + '">' + esc(url) + '</a>' +
+    '</div>';
+}
+
+function reasonChecklistHtml(list, rowIndex, side, selected) {
+  return list.map(function(pair) {
+    const checked = selected.indexOf(pair[0]) !== -1 ? ' checked' : '';
+    const id = 'qr-' + rowIndex + '-' + side + '-' + pair[0];
+    return '<label for="' + id + '">' +
+      '<input type="checkbox" id="' + id + '"' + checked +
+        ' onchange="toggleQualityReason(' + rowIndex + ', \'' + side + '\', \'' + pair[0] + '\', this.checked)">' +
+      '<span>' + pair[0] + ' ' + esc(pair[1]) + '</span>' +
+      '</label>';
+  }).join('');
+}
+
+function optionCell(label, url, rowIndex, side) {
+  return '<div class="cell">' +
+    '<div class="label">' + label + '</div>' +
+    '<div class="img-wrap"><img src="' + esc(url) + '" loading="lazy" alt="' + esc(label) + '"></div>' +
+    '<a class="img-link" href="' + esc(url) + '" target="_blank" rel="noopener" title="' + esc(url) + '">' + esc(url) + '</a>' +
+    qualityReviewHtml(rowIndex, side) +
+    '</div>';
+}
+
+function qualityReviewHtml(rowIndex, side) {
+  const q = getQuality(rowIndex, side);
+  const buttons = [
+    { key: 'fail', label: 'Fail', cls: 'q-fail' },
+    { key: 'pass', label: 'Pass', cls: 'q-pass' },
+    { key: 'high_quality', label: 'High Quality', cls: 'q-high' },
+  ].map(function(b) {
+    const chosen = q.status === b.key ? ' q-chosen ' + b.cls : '';
+    return '<button class="' + chosen + '" onclick="setQualityStatus(' + rowIndex + ', \'' + side + '\', \'' + b.key + '\')">' + b.label + '</button>';
+  }).join('');
+
+  let reasonBlock = '';
+  if (q.status === 'fail') {
+    reasonBlock =
+      '<div class="quality-reasons">' + reasonChecklistHtml(FAIL_REASONS, rowIndex, side, q.reasons) + '</div>' +
+      '<div class="quality-count" id="qcount-' + rowIndex + '-' + side + '">' +
+        (q.reasons.length > 0 ? '已选 ' + q.reasons.length + ' 项' : '') + '</div>';
+  } else if (q.status === 'pass') {
+    reasonBlock =
+      '<div class="quality-reasons">' + reasonChecklistHtml(NOT_HQ_REASONS, rowIndex, side, q.reasons) + '</div>' +
+      '<div class="quality-count" id="qcount-' + rowIndex + '-' + side + '">' +
+        (q.reasons.length > 0 ? '已选 ' + q.reasons.length + ' 项' : '') + '</div>';
+  }
+
+  return '<div class="quality-review">' +
+    '<div class="quality-buttons">' + buttons + '</div>' +
+    reasonBlock +
+    '</div>';
+}
+
+function renderRow(index) {
+  const row = DATA[index];
+  const v = votes[row.index];
+  const el = document.getElementById('row-' + row.index);
+  const voted = !!v;
+  const optA = row.options[0], optB = row.options[1];
+
+  // Never reveal which model A/B actually are — the mapping only lives in
+  // the backend Sheet (A_model/B_model columns) for later analysis, so the
+  // evaluator can't build up positional bias across rows.
+  el.className = 'row' + (voted ? ' voted' : '');
+  el.innerHTML =
+    '<div class="row-header">' +
+      '<div class="header-thumbs">' +
+        headerThumb('用户图', row.user_img) +
+        headerThumb('商品图', row.product_img) +
+      '</div>' +
+      '<div class="header-title">#' + (row.index + 1) + ' · ' + esc(row.category) + '</div>' +
+    '</div>' +
+    '<div class="row-body">' +
+      '<div class="main-cells">' +
+        cell('模版图', row.template_img) +
+        optionCell('选项 A', optA.url, row.index, 'A') +
+        optionCell('选项 B', optB.url, row.index, 'B') +
+      '</div>' +
+      '<div class="vote-sidebar">' +
+        optionButtonsHtml(row) +
+        '<textarea class="remark-input" placeholder="备注（可选）" ' +
+          'oninput="remarks[' + row.index + ']=this.value" ' +
+          'onblur="onRemarkChange(' + row.index + ', this.value)">' + esc(remarks[row.index] || '') + '</textarea>' +
+      '</div>' +
+    '</div>';
+}
+
+function buildRows() {
+  const container = document.getElementById('rows');
+  container.innerHTML = DATA.map(row => '<div class="row" id="row-' + row.index + '"></div>').join('');
+  DATA.forEach(row => renderRow(row.index));
+  applyFilters();
+}
+
+// Filters operate on A/B *position* only (never on real model identity) so
+// the evaluator can't use them to reverse-engineer which side is which.
+function rowMatchesFilters(rowIndex) {
+  const choice = votes[rowIndex];
+  const qa = getQuality(rowIndex, 'A');
+  const qb = getQuality(rowIndex, 'B');
+
+  const emptyGsb = document.getElementById('filter-empty-gsb').checked;
+  const emptyQuality = document.getElementById('filter-empty-quality').checked;
+  const missingReason = document.getElementById('filter-missing-reason').checked;
+  const aStatusFilter = document.getElementById('filter-a-status').value;
+  const bStatusFilter = document.getElementById('filter-b-status').value;
+
+  if (emptyGsb && choice) return false;
+  if (emptyQuality && qa.status && qb.status) return false;
+  if (missingReason) {
+    const aMissing = qa.status && qa.status !== 'high_quality' && qa.reasons.length === 0;
+    const bMissing = qb.status && qb.status !== 'high_quality' && qb.reasons.length === 0;
+    if (!aMissing && !bMissing) return false;
+  }
+  if (aStatusFilter) {
+    if (aStatusFilter === 'empty' ? !!qa.status : qa.status !== aStatusFilter) return false;
+  }
+  if (bStatusFilter) {
+    if (bStatusFilter === 'empty' ? !!qb.status : qb.status !== bStatusFilter) return false;
+  }
+  return true;
+}
+
+function resetFilters() {
+  document.getElementById('filter-empty-gsb').checked = false;
+  document.getElementById('filter-empty-quality').checked = false;
+  document.getElementById('filter-missing-reason').checked = false;
+  document.getElementById('filter-a-status').value = '';
+  document.getElementById('filter-b-status').value = '';
+  applyFilters();
+}
+
+function applyFilters() {
+  const filterBar = document.getElementById('filter-bar');
+  if (!filterBar) return; // not built yet (name gate still showing)
+  let visible = 0;
+  DATA.forEach(function(row) {
+    const el = document.getElementById('row-' + row.index);
+    if (!el) return;
+    const match = rowMatchesFilters(row.index);
+    el.classList.toggle('filtered-out', !match);
+    if (match) visible++;
+  });
+  const anyFilterActive =
+    document.getElementById('filter-empty-gsb').checked ||
+    document.getElementById('filter-empty-quality').checked ||
+    document.getElementById('filter-missing-reason').checked ||
+    document.getElementById('filter-a-status').value ||
+    document.getElementById('filter-b-status').value;
+  document.getElementById('filter-count').textContent =
+    anyFilterActive ? ('筛选后显示 ' + visible + ' / ' + DATA.length + ' 行') : '';
+}
+
+document.addEventListener('click', function(e) {
+  if (e.target.tagName === 'IMG' && e.target.closest('.img-wrap, .header-thumb')) {
+    document.getElementById('lightbox-img').src = e.target.src;
+    document.getElementById('lightbox').classList.add('open');
+  }
+});
+document.getElementById('lightbox').addEventListener('click', function() {
+  document.getElementById('lightbox').classList.remove('open');
+  document.getElementById('lightbox-img').src = '';
+});
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    document.getElementById('lightbox').classList.remove('open');
+    document.getElementById('lightbox-img').src = '';
+  }
+});
+
+// Sweep out any localStorage keys left behind by a previous build version.
+(function purgeStaleLocalStorage() {
+  const prefix = 'blind-eval-';
+  const keys = [];
+  for (let i = 0; i < localStorage.length; i++) keys.push(localStorage.key(i));
+  keys.forEach(function(k) {
+    if (k && k.indexOf(prefix) === 0 && k.indexOf(BUILD_VERSION) === -1) {
+      localStorage.removeItem(k);
+    }
+  });
+})();
+
+if (evaluator) {
+  document.getElementById('name-gate').style.display = 'none';
+  loadMyVotes();
+} else {
+  renderSummary();
+  buildRows();
+}
+</script>
+</body>
+</html>
